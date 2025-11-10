@@ -146,9 +146,12 @@ for i in range(0, len(product_names), products_per_row):
             st.image(product["img"], width=200)
             st.write(product["description"])
             st.write(f"Price: NT${product['price']}")
+            
+            quantity = st.number_input(f"Quantity for {product_name}", min_value=1, max_value=20, value=1, key=f"qty_{product_name}")
             if st.button(f"Add {product_name} to Cart", key=f"add_{product_name}"):
-                st.session_state.cart.append({"name": product_name, "price": product["price"]})
-                st.success(f"✅ Added {product_name} to cart!")
+                for _ in range(quantity):
+                    st.session_state.cart.append({"name": product_name, "price": product["price"]})
+                st.success(f"✅ Added {quantity} x {product_name} to cart!")
 
 if st.session_state.show_rating:
     with st.expander("Rate Our Store"):
