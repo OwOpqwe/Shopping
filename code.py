@@ -1,4 +1,3 @@
-
 import streamlit as st
 import smtplib
 from email.mime.text import MIMEText
@@ -95,7 +94,8 @@ st.sidebar.subheader("Buyer Information")
 st.session_state.buyer_name = st.sidebar.text_input("Your Name", value=st.session_state.buyer_name)
 st.session_state.buyer_email = st.sidebar.text_input("Your Email", value=st.session_state.buyer_email)
 st.session_state.buyer_notes = st.sidebar.text_area("Any special instructions?", value=st.session_state.buyer_notes)
-products_per_row = st.sidebar.slider("Products per row (set 1 for mobile)", min_value=1, max_value=4, value=2)
+
+products_per_row = 2  # Fixed number of products per row
 
 if not st.session_state.cart:
     st.sidebar.info("Your cart is empty.")
