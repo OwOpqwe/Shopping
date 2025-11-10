@@ -1,150 +1,153 @@
 import streamlit as st
+import smtplib
+from email.mime.text import MIMEText
 
 # --- Page Setup ---
-st.set_page_config(page_title="Simple Shop", layout="wide")
-st.title("🛍️ Welcome to the Streamlit Shop")
+st.set_page_config(page_title="Online Store", layout="wide")
+st.title("Welcome to the Online Store")
 
-# --- Initialize session state ---
-if "products" not in st.session_state:
-    st.session_state.products = []
+# 🚫 BIG RED "NO REFUNDS" SIGN
+st.markdown(
+    "<h1 style='color:red; text-align:center;'>🚫 NO REFUNDS 🚫</h1>",
+    unsafe_allow_html=True
+)
+
+# --- SMTP Configuration ---
+OWNER_EMAIL = "charlie2011.ting@gmail.com"  # Where orders go
+SMTP_SERVER = "smtp.gmail.com"
+SMTP_PORT = 465
+SMTP_USER = "youremail@gmail.com"           # your Gmail address
+SMTP_PASSWORD = "your_app_password"         # Gmail App Password
+
+# --- Product Dictionary ---
+products = {
+    "Chicken Noodle Snacks": {
+        "price": 17,
+        "img": "https://example.com/chicken_noodle_snack.jpg",  # replace with real link
+        "description": "Tasty and convenient chicken noodle snacks."
+    },
+    "Dr Pepper": {
+        "price": 37,
+        "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cc/Dr_Pepper_Dose_2024.jpg/250px-Dr_Pepper_Dose_2024.jpg",
+        "description": "Refreshing soda drink."
+    },
+    "Snack & Drink Bundle": {
+        "price": 50,
+        "img": "https://example.com/bundle.jpg",  # replace with real link
+        "description": "1 Chicken Noodle Snack + 1 Dr Pepper bundle deal."
+    }
+}
+
+# --- Initialize Session State ---
 if "cart" not in st.session_state:
     st.session_state.cart = []
-if "username" not in st.session_state:
-    st.session_state.username = ""
 if "ratings" not in st.session_state:
     st.session_state.ratings = []
 if "show_rating" not in st.session_state:
     st.session_state.show_rating = False
+if "buyer_name" not in st.session_state:
+    st.session_state.buyer_name = ""
+if "buyer_email" not in st.session_state:
+    st.session_state.buyer_email = ""
+if "buyer_notes" not in st.session_state:
+    st.session_state.buyer_notes = ""
 
-# --- Fix older products ---
-for p in st.session_state.products:
-    if "owner" not in p:
-        p["owner"] = "Unknown"
+# --- Function: Send Order Email ---
+def send_order_email(cart, total, buyer_name, buyer_email, buyer_notes):
+    order_details = "\n".join([f"- {item['name']} (NT${item['price']})" for item in cart])
+    notes_text = f"\n\nBuyer Notes:\n{buyer_notes}" if buyer_notes.strip() else ""
 
-# --- Login / Username Input ---
-if not st.session_state.username:
-    st.session_state.username = st.text_input("Enter your name to continue:", key="username_input")
-    if not st.session_state.username:
-        st.stop()
+    owner_msg = MIMEText(
+        f"New order received!\n\nBuyer: {buyer_name}\nEmail: {buyer_email}\n\n"
+        f"Order Details:\n{order_details}\n\nTotal: NT${total}{notes_text}"
+    )
+    owner_msg["Subject"] = f"New Order from {buyer_name}"
+    owner_msg["From"] = SMTP_USER
+    owner_msg["To"] = OWNER_EMAIL
 
-# --- Sidebar User Info & Logout ---
-st.sidebar.write(f"👤 Logged in as: **{st.session_state.username}**")
-if st.sidebar.button("🚪 Logout"):
-    # Reset session state variables safely
-    st.session_state.username = ""
-    st.session_state.cart = []
-    st.session_state.show_rating = False
+    buyer_msg = MIMEText(
+        f"Hi {buyer_name},\n\nThank you for your purchase!\n\n"
+        f"Your Order:\n{order_details}\n\nTotal: NT${total}{notes_text}\n\n"
+        f"Please prepare cash upon delivery or pickup.\n\n🚫 NO REFUNDS 🚫"
+    )
+    buyer_msg["Subject"] = "Your Order Confirmation"
+    buyer_msg["From"] = SMTP_USER
+    buyer_msg["To"] = buyer_email
 
-# --- Sidebar Navigation ---
-page = st.sidebar.radio(
-    "Navigation",
-    ["🏠 Home", "🛒 Cart", "➕ Add Product", "📦 My Products"]
-)
+    try:
+        with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT) as server:
+            server.login(SMTP_USER, SMTP_PASSWORD)
+            server.send_message(owner_msg)
+            server.send_message(buyer_msg)
+        st.success("✅ Order emails sent successfully!")
+    except Exception as e:
+        st.error(f"Failed to send emails: {e}")
 
-# --- Home Page ---
-if page == "🏠 Home":
-    st.header("Available Products")
-    if not st.session_state.products:
-        st.info("No products available yet. Add some in the 'Add Product' page.")
-    else:
-        for i, product in enumerate(st.session_state.products):
-            with st.container():
-                st.subheader(product.get("name", "Unnamed Product"))
-                st.write(product.get("description", "No description available."))
-                st.write(f"💲 Price: ${product.get('price', 0.0):.2f}")
-                st.write(f"📦 In Stock: {product.get('stock', 0)}")
-                owner = product.get("owner", "Unknown Seller")
-                st.caption(f"🧑‍💼 Seller: {owner}")
+# --- Sidebar (Cart + Buyer Info + Responsive Setting) ---
+st.sidebar.header("Your Cart")
+st.sidebar.subheader("Buyer Information")
 
-                # Remove button for owner
-                if owner == st.session_state.username:
-                    if st.button(f"🗑️ Remove {product.get('name','')}", key=f"remove_home_{i}"):
-                        st.session_state.products.pop(i)
-                        st.success(f"Removed '{product.get('name','')}' from shop.")
-                
-                # Add to cart / Out of Stock
-                elif product.get("stock", 0) > 0:
-                    if st.button(f"Add {product.get('name','item')} to Cart", key=f"cart_{i}"):
-                        st.session_state.cart.append(product)
-                        product["stock"] = product.get("stock", 0) - 1
-                        st.success(f"Added {product.get('name','item')} to cart!")
-                else:
-                    st.error("❌ Out of Stock")
+st.session_state.buyer_name = st.sidebar.text_input("Your Name", value=st.session_state.buyer_name)
+st.session_state.buyer_email = st.sidebar.text_input("Your Email", value=st.session_state.buyer_email)
+st.session_state.buyer_notes = st.sidebar.text_area("Any special instructions?", value=st.session_state.buyer_notes)
 
-# --- Cart Page ---
-elif page == "🛒 Cart":
-    st.header("Your Shopping Cart")
-    
-    if not st.session_state.cart:
-        st.info("Your cart is empty.")
-    else:
-        total = sum(item.get("price", 0.0) for item in st.session_state.cart)
-        for item in st.session_state.cart:
-            st.write(f"- {item.get('name','Unnamed Product')} (${item.get('price',0.0):.2f})")
-        st.write(f"**Total: ${total:.2f}**")
-        
-        # Complete purchase button
-        if st.button("✅ Complete Purchase"):
-            st.success("Purchase completed! Thank you for your order.")
-            st.session_state.cart = []
-            st.session_state.show_rating = True  # Show rating after purchase
+# Sidebar slider for responsive layout
+products_per_row = st.sidebar.slider("Products per row (set 1 for mobile)", min_value=1, max_value=4, value=2)
 
-# --- Rating Expander (Pyodide-safe) ---
+if not st.session_state.cart:
+    st.sidebar.info("Your cart is empty.")
+else:
+    total = sum(item["price"] for item in st.session_state.cart)
+    for i, item in enumerate(st.session_state.cart):
+        st.sidebar.write(f"- {item['name']} (NT${item['price']})")
+        if st.sidebar.button(f"Remove {i+1}", key=f"remove_{i}"):
+            st.session_state.cart.pop(i)
+            st.experimental_rerun()
+    st.sidebar.write(f"**Total: NT${total}**")
+
+    if not st.session_state.buyer_name.strip() or not st.session_state.buyer_email.strip():
+        st.sidebar.warning("Please enter your name and email before completing purchase.")
+    elif st.sidebar.button("Complete Purchase"):
+        send_order_email(
+            st.session_state.cart,
+            total,
+            st.session_state.buyer_name,
+            st.session_state.buyer_email,
+            st.session_state.buyer_notes
+        )
+        st.sidebar.success("🎉 Order sent successfully!")
+        st.session_state.cart = []
+        st.session_state.show_rating = True
+
+# --- Main Page: Responsive Product Layout ---
+st.header("Products")
+st.info("💵 Cash Only — No Card Payments")
+
+product_names = list(products.keys())
+
+# Display products side by side (responsive)
+for i in range(0, len(product_names), products_per_row):
+    cols = st.columns(products_per_row)
+    for j, product_name in enumerate(product_names[i:i+products_per_row]):
+        product = products[product_name]
+        with cols[j]:
+            st.subheader(product_name)
+            st.image(product["img"], width=200)  # smaller images
+            st.write(product["description"])
+            st.write(f"Price: NT${product['price']}")
+            if st.button(f"Add {product_name} to Cart", key=f"add_{product_name}"):
+                st.session_state.cart.append({"name": product_name, "price": product["price"]})
+                st.success(f"✅ Added {product_name} to cart!")
+
+# --- Rating Section ---
 if st.session_state.show_rating:
-    with st.expander("🎉 Rate Our App!"):
-        st.write("Please rate the app (1–5 stars):")
-        rating = st.slider("Your Rating", 1, 5, 5)
-        if st.button("Submit Rating", key="submit_rating"):
+    with st.expander("Rate Our Store"):
+        rating = st.slider("Please rate your shopping experience (1–5 stars):", 1, 5, 5)
+        if st.button("Submit Rating"):
             st.session_state.ratings.append(rating)
-            st.success(f"Thank you for rating the app {rating}⭐!")
+            st.success(f"Thank you for rating us {rating}⭐!")
             st.session_state.show_rating = False
 
-# --- Add Product Page ---
-elif page == "➕ Add Product":
-    st.header("Add a New Product")
-    name = st.text_input("Product Name")
-    description = st.text_area("Product Description")
-    price = st.number_input("Product Price", min_value=0.0, step=0.01)
-    stock = st.number_input("Stock Quantity", min_value=0, step=1)
-    if st.button("Add Product"):
-        if name and price > 0:
-            st.session_state.products.append({
-                "name": name,
-                "description": description,
-                "price": price,
-                "stock": stock,
-                "owner": st.session_state.username
-            })
-            st.success(f"Product '{name}' added successfully!")
-        else:
-            st.error("Please enter a valid name and price.")
-
-# --- My Products Page ---
-elif page == "📦 My Products":
-    st.header("My Products")
-    my_products = [p for p in st.session_state.products if p.get("owner") == st.session_state.username]
-    if not my_products:
-        st.info("You haven't added any products yet.")
-    else:
-        for i, product in enumerate(my_products):
-            st.subheader(product.get("name", "Unnamed Product"))
-            st.write(product.get("description", "No description available."))
-            st.write(f"💲 Price: ${product.get('price', 0.0):.2f}")
-            st.write(f"📦 Stock: {product.get('stock',0)}")
-
-            # Restock
-            restock = st.number_input(
-                f"Add stock for {product.get('name','item')}",
-                min_value=0, step=1,
-                key=f"restock_{product.get('name','')}"
-            )
-            if st.button(f"Restock {product.get('name','item')}", key=f"btn_{product.get('name','')}"):
-                product["stock"] = product.get("stock",0) + restock
-                st.success(f"Added {restock} more units to {product.get('name','item')}.")
-
-            # Remove product
-            if st.button(f"🗑️ Remove {product.get('name','')}", key=f"remove_my_{i}"):
-                index_in_main = next((j for j,p_main in enumerate(st.session_state.products) if p_main==product), None)
-                if index_in_main is not None:
-                    st.session_state.products.pop(index_in_main)
-                    st.success(f"Removed '{product.get('name','')}' from your products.")
+if st.session_state.ratings:
+    avg = sum(st.session_state.ratings) / len(st.session_state.ratings)
+    st.sidebar.info(f"⭐ Average Rating: {avg:.1f}/5 ({len(st.session_state.ratings)} ratings)")
