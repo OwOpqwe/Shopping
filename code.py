@@ -51,7 +51,7 @@ products = {
     },
     "Snack & Drink Bundle": {
         "price": 50,
-        "img": "https://example.com/bundle.jpg",
+        "img": None,
         "description": "1 Chicken Noodle Snack + 1 Dr Pepper bundle deal."
     }
 }
@@ -95,7 +95,7 @@ st.session_state.buyer_name = st.sidebar.text_input("Your Name", value=st.sessio
 st.session_state.buyer_email = st.sidebar.text_input("Your Email", value=st.session_state.buyer_email)
 st.session_state.buyer_notes = st.sidebar.text_area("Any special instructions?", value=st.session_state.buyer_notes)
 
-products_per_row = 2  # Fixed number of products per row
+products_per_row = 2  # fixed layout
 
 if not st.session_state.cart:
     st.sidebar.info("Your cart is empty.")
@@ -143,10 +143,16 @@ for i in range(0, len(product_names), products_per_row):
         product = products[product_name]
         with cols[j]:
             st.subheader(product_name)
-            st.image(product["img"], width=200)
+            if product_name == "Snack & Drink Bundle":
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.image(products["Chicken Noodle Snacks"]["img"], width=150)
+                with col2:
+                    st.image(products["Dr Pepper"]["img"], width=150)
+            else:
+                st.image(product["img"], width=200)
             st.write(product["description"])
             st.write(f"Price: NT${product['price']}")
-            
             quantity = st.number_input(f"Quantity for {product_name}", min_value=1, max_value=20, value=1, key=f"qty_{product_name}")
             if st.button(f"Add {product_name} to Cart", key=f"add_{product_name}"):
                 for _ in range(quantity):
