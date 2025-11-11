@@ -41,7 +41,7 @@ SMTP_PASSWORD = "your_app_password"
 products = {
     "Chicken Noodle Snacks": {
         "price": 17,
-        "img": "https://example.com/chicken_noodle_snack.jpg",
+        "img": "https://images.cdn.saveonfoods.com/detail/00074410700799.jpg",
         "description": "Tasty and convenient chicken noodle snacks."
     },
     "Dr Pepper": {
