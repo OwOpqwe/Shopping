@@ -1,9 +1,9 @@
 import streamlit as st
-import smtplib
-from email.mime.text import MIMEText
 
+# --- Page Setup ---
 st.set_page_config(page_title="Online Store", layout="wide")
 
+# --- Styling ---
 st.markdown(
     """
     <style>
@@ -22,100 +22,16 @@ st.markdown(
     }
     .element-container img {
         border-radius: 15px;
-        border: 4px solid white;
+        border: 6px solid white;
     }
     </style>
     """,
     unsafe_allow_html=True
 )
 
+# --- Title and Notices ---
 st.title("Welcome to the Online Store")
 st.markdown("<h1 style='color:red; text-align:center;'>🚫 NO REFUNDS 🚫</h1>", unsafe_allow_html=True)
-
-OWNER_EMAIL = "charlie2011.ting@gmail.com"
-SMTP_SERVER = "smtp.gmail.com"
-SMTP_PORT = 465
-SMTP_USER = "youremail@gmail.com"
-SMTP_PASSWORD = "your_app_password"
-
-products = {
-    "Chicken Noodle Snacks": {
-        "price": 17,
-        "img": "https://images.cdn.saveonfoods.com/detail/00074410700799.jpg",
-        "description": "Tasty and convenient chicken noodle snacks."
-    },
-    "Dr Pepper": {
-        "price": 37,
-        "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cc/Dr_Pepper_Dose_2024.jpg/250px-Dr_Pepper_Dose_2024.jpg",
-        "description": "Refreshing soda drink."
-    },
-    "Snack & Drink Bundle": {
-        "price": 50,
-        "img": None,
-        "description": "1 Chicken Noodle Snack + 1 Dr Pepper bundle deal."
-    }
-}
-
-if "cart" not in st.session_state:
-    st.session_state.cart = []
-if "ratings" not in st.session_state:
-    st.session_state.ratings = []
-if "show_rating" not in st.session_state:
-    st.session_state.show_rating = False
-if "buyer_name" not in st.session_state:
-    st.session_state.buyer_name = ""
-if "buyer_email" not in st.session_state:
-    st.session_state.buyer_email = ""
-if "buyer_notes" not in st.session_state:
-    st.session_state.buyer_notes = ""
-
-def send_order_email(cart, total, buyer_name, buyer_email, buyer_notes):
-    order_details = "\n".join([f"- {item['name']} (NT${item['price']})" for item in cart])
-    notes_text = f"\n\nBuyer Notes:\n{buyer_notes}" if buyer_notes.strip() else ""
-    owner_msg = MIMEText(f"New order received!\n\nBuyer: {buyer_name}\nEmail: {buyer_email}\n\nOrder Details:\n{order_details}\n\nTotal: NT${total}{notes_text}")
-    owner_msg["Subject"] = f"New Order from {buyer_name}"
-    owner_msg["From"] = SMTP_USER
-    owner_msg["To"] = OWNER_EMAIL
-    buyer_msg = MIMEText(f"Hi {buyer_name},\n\nThank you for your purchase!\n\nYour Order:\n{order_details}\n\nTotal: NT${total}{notes_text}\n\nPlease prepare cash upon delivery or pickup.\n\n🚫 NO REFUNDS 🚫")
-    buyer_msg["Subject"] = "Your Order Confirmation"
-    buyer_msg["From"] = SMTP_USER
-    buyer_msg["To"] = buyer_email
-    try:
-        with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT) as server:
-            server.login(SMTP_USER, SMTP_PASSWORD)
-            server.send_message(owner_msg)
-            server.send_message(buyer_msg)
-        st.success("✅ Order emails sent successfully!")
-    except Exception as e:
-        st.error(f"Failed to send emails: {e}")
-
-st.sidebar.header("Your Cart")
-st.sidebar.subheader("Buyer Information")
-st.session_state.buyer_name = st.sidebar.text_input("Your Name", value=st.session_state.buyer_name)
-st.session_state.buyer_email = st.sidebar.text_input("Your Email", value=st.session_state.buyer_email)
-st.session_state.buyer_notes = st.sidebar.text_area("Any special instructions?", value=st.session_state.buyer_notes)
-
-products_per_row = 2  # fixed layout
-
-if not st.session_state.cart:
-    st.sidebar.info("Your cart is empty.")
-else:
-    total = sum(item["price"] for item in st.session_state.cart)
-    for i, item in enumerate(st.session_state.cart):
-        st.sidebar.write(f"- {item['name']} (NT${item['price']})")
-        if st.sidebar.button(f"Remove {i+1}", key=f"remove_{i}"):
-            st.session_state.cart.pop(i)
-            st.experimental_rerun()
-    st.sidebar.write(f"**Total: NT${total}**")
-    if not st.session_state.buyer_name.strip() or not st.session_state.buyer_email.strip():
-        st.sidebar.warning("Please enter your name and email before completing purchase.")
-    elif st.sidebar.button("Complete Purchase"):
-        send_order_email(st.session_state.cart, total, st.session_state.buyer_name, st.session_state.buyer_email, st.session_state.buyer_notes)
-        st.sidebar.success("🎉 Order sent successfully!")
-        st.session_state.cart = []
-        st.session_state.show_rating = True
-
-st.header("Products")
 
 st.markdown(
     """
@@ -135,11 +51,69 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+# --- Product Data ---
+products = {
+    "Chicken Noodle Snacks": {
+        "price": 17,
+        "img": "https://images.cdn.saveonfoods.com/detail/00074410700799.jpg",
+        "description": "Tasty and convenient chicken noodle snacks."
+    },
+    "Dr Pepper": {
+        "price": 37,
+        "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cc/Dr_Pepper_Dose_2024.jpg/250px-Dr_Pepper_Dose_2024.jpg",
+        "description": "Refreshing soda drink."
+    },
+    "Snack & Drink Bundle": {
+        "price": 50,
+        "img": None,
+        "description": "1 Chicken Noodle Snack + 1 Dr Pepper bundle deal."
+    }
+}
+
+# --- Session State Initialization ---
+if "cart" not in st.session_state:
+    st.session_state.cart = []
+if "ratings" not in st.session_state:
+    st.session_state.ratings = []
+if "show_rating" not in st.session_state:
+    st.session_state.show_rating = False
+if "buyer_name" not in st.session_state:
+    st.session_state.buyer_name = ""
+if "buyer_notes" not in st.session_state:
+    st.session_state.buyer_notes = ""
+
+# --- Sidebar (Cart) ---
+st.sidebar.header("Your Cart")
+st.sidebar.subheader("Buyer Information")
+st.session_state.buyer_name = st.sidebar.text_input("Your Name", value=st.session_state.buyer_name)
+st.session_state.buyer_notes = st.sidebar.text_area("Any special instructions?", value=st.session_state.buyer_notes)
+
+if not st.session_state.cart:
+    st.sidebar.info("Your cart is empty.")
+else:
+    total = sum(item["price"] for item in st.session_state.cart)
+    for i, item in enumerate(st.session_state.cart):
+        st.sidebar.write(f"- {item['name']} (NT${item['price']})")
+        if st.sidebar.button(f"Remove {i+1}", key=f"remove_{i}"):
+            st.session_state.cart.pop(i)
+            st.experimental_rerun()
+    st.sidebar.write(f"**Total: NT${total}**")
+
+    if not st.session_state.buyer_name.strip():
+        st.sidebar.warning("Please enter your name before completing purchase.")
+    elif st.sidebar.button("Complete Purchase"):
+        st.sidebar.success("🎉 Order saved! Please pay with cash upon delivery.")
+        st.session_state.cart = []
+        st.session_state.show_rating = True
+
+# --- Product Display ---
+st.header("Products")
 product_names = list(products.keys())
+products_per_row = 2  # fixed layout
 
 for i in range(0, len(product_names), products_per_row):
     cols = st.columns(products_per_row)
-    for j, product_name in enumerate(product_names[i:i+products_per_row]):
+    for j, product_name in enumerate(product_names[i:i + products_per_row]):
         product = products[product_name]
         with cols[j]:
             st.subheader(product_name)
@@ -159,6 +133,7 @@ for i in range(0, len(product_names), products_per_row):
                     st.session_state.cart.append({"name": product_name, "price": product["price"]})
                 st.success(f"✅ Added {quantity} x {product_name} to cart!")
 
+# --- Rating Section ---
 if st.session_state.show_rating:
     with st.expander("Rate Our Store"):
         rating = st.slider("Please rate your shopping experience (1–5 stars):", 1, 5, 5)
